@@ -6,6 +6,7 @@ import { Bell } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ensureClientSession } from "@/lib/auth/client-session";
 import { base64UrlToUint8Array, registerServiceWorker } from "@/lib/notifications/sw";
 
 type PushOptinCardProps = {
@@ -24,19 +25,10 @@ export function PushOptinCard({ compact = false }: PushOptinCardProps) {
       return;
     }
 
-    const preflightResponse = await fetch("/api/push/preferences", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({})
-    });
-
-    if (preflightResponse.status === 401) {
+    try {
+      await ensureClientSession();
+    } catch {
       router.push(`/login?next=${encodeURIComponent(pathname || "/")}`);
-      return;
-    }
-
-    if (!preflightResponse.ok) {
-      setMessage("Não foi possível validar sua sessão.");
       return;
     }
 

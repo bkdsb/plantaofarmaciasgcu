@@ -5,6 +5,7 @@ import { Heart } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { toggleFavoritePharmacyAction } from "@/actions/public/preferences-actions";
+import { ensureClientSession } from "@/lib/auth/client-session";
 
 type FavoriteButtonProps = {
   pharmacyId: number;
@@ -21,7 +22,12 @@ export function FavoriteButton({ pharmacyId, isFavorite }: FavoriteButtonProps) 
       disabled={isPending}
       onClick={() => {
         startTransition(async () => {
-          await toggleFavoritePharmacyAction(pharmacyId, !isFavorite);
+          try {
+            await ensureClientSession();
+            await toggleFavoritePharmacyAction(pharmacyId, !isFavorite);
+          } catch {
+            // Evita crash no cliente caso sessão anônima esteja desabilitada.
+          }
         });
       }}
     >

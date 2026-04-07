@@ -9,26 +9,52 @@ import { Input } from "@/components/ui/input";
 
 type FeedbackState = "idle" | "success" | "error";
 
-export function LoginForm() {
+type LoginFormProps = {
+  urlErrorCode?: string;
+  urlError?: string;
+};
+
+export function LoginForm({ urlErrorCode, urlError }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<FeedbackState>("idle");
 
+  const allowedAdminEmails = (process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAILS ?? "brunokalebe@gmail.com")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const isAllowedEmail = allowedAdminEmails.includes(normalizedEmail);
   const isEmailLikelyValid = email.includes("@") && email.includes(".");
+
+  const urlErrorMessage =
+    urlError === "unauthorized_email"
+      ? "Este e-mail não está autorizado para acessar o painel."
+      : urlErrorCode === "otp_expired"
+        ? "O link mágico expirou ou já foi usado. Solicite um novo link."
+        : null;
 
   async function handleSignIn() {
     setMessage(null);
     setFeedbackState("idle");
+
+    if (!isAllowedEmail) {
+      setFeedbackState("error");
+      setMessage("Somente o e-mail autorizado pode acessar o painel.");
+      return;
+    }
 
     try {
       setLoading(true);
       const supabase = createClient();
 
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: normalizedEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/admin`
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/admin`,
+          shouldCreateUser: false
         }
       });
 
@@ -63,10 +89,14 @@ export function LoginForm() {
         <Button className="w-full" disabled={loading || !isEmailLikelyValid} onClick={handleSignIn}>
           {loading ? "Enviando..." : "Receber link mágico"}
         </Button>
-        {message ? (
-          <p className={feedbackState === "error" ? "text-xs text-rose-600" : "text-xs text-emerald-700"}>{message}</p>
+        {message || urlErrorMessage ? (
+          <p className={feedbackState === "error" || urlErrorMessage ? "text-xs text-rose-600" : "text-xs text-emerald-700"}>
+            {message ?? urlErrorMessage}
+          </p>
         ) : (
-          <p className="text-xs text-muted-foreground">Use o mesmo e-mail que terá acesso de superadmin.</p>
+          <p className="text-xs text-muted-foreground">
+            Acesso permitido apenas para: <strong>{allowedAdminEmails[0] ?? "email autorizado"}</strong>.
+          </p>
         )}
       </CardContent>
     </Card>

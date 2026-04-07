@@ -29,8 +29,14 @@ Base inicial de um sistema web completo para gestão de plantão rotativo de far
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (ou `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
    - `SUPABASE_SERVICE_ROLE_KEY` (ou `SUPABASE_SECRET_KEY`)
+   - `NEXT_PUBLIC_ALLOWED_ADMIN_EMAILS` (ex.: `brunokalebe@gmail.com`)
 4. `npm install`
 5. `npm run dev`
+
+## Configuração Auth (Supabase)
+- Em `Auth > URL Configuration`, adicionar:
+  - `https://plantaofarmaciasgcu.vercel.app/auth/callback`
+- Para favoritar/notificações sem login manual, habilitar `Anonymous Sign-Ins` em `Auth > Providers > Anonymous`.
 
 ## Endpoints internos
 - `POST /api/push/subscribe`
