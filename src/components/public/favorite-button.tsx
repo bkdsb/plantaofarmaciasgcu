@@ -1,10 +1,12 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Heart } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { toggleFavoritePharmacyAction } from "@/actions/public/preferences-actions";
+import { createClient } from "@/lib/supabase/client";
 
 type FavoriteButtonProps = {
   pharmacyId: number;
@@ -13,6 +15,8 @@ type FavoriteButtonProps = {
 
 export function FavoriteButton({ pharmacyId, isFavorite }: FavoriteButtonProps) {
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const pathname = usePathname();
 
   return (
     <Button
@@ -21,7 +25,21 @@ export function FavoriteButton({ pharmacyId, isFavorite }: FavoriteButtonProps) 
       disabled={isPending}
       onClick={() => {
         startTransition(async () => {
-          await toggleFavoritePharmacyAction(pharmacyId, !isFavorite);
+          const supabase = createClient();
+          const {
+            data: { user }
+          } = await supabase.auth.getUser();
+
+          if (!user) {
+            router.push(`/login?next=${encodeURIComponent(pathname || "/")}`);
+            return;
+          }
+
+          try {
+            await toggleFavoritePharmacyAction(pharmacyId, !isFavorite);
+          } catch {
+            // Evita quebrar a UX pública por erro transitório de rede/ação.
+          }
         });
       }}
     >

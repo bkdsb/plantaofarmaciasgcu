@@ -14,9 +14,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="border-b bg-background">
-        <div className="container flex h-14 items-center gap-3 overflow-x-auto text-sm">
+        <div className="container flex min-h-14 flex-wrap items-center gap-2 py-2 text-sm">
           {links.map((item) => (
-            <Link key={item.href} href={item.href} className="whitespace-nowrap rounded-md px-2 py-1 hover:bg-muted">
+            <Link
+              key={item.href}
+              href={item.href}
+              className="whitespace-nowrap rounded-md border border-transparent px-3 py-1.5 hover:border-border hover:bg-muted"
+            >
               {item.label}
             </Link>
           ))}

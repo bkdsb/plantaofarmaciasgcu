@@ -1,19 +1,32 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { enablePushNotificationsAction } from "@/actions/public/preferences-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { registerServiceWorker } from "@/lib/notifications/sw";
+import { base64UrlToUint8Array, registerServiceWorker } from "@/lib/notifications/sw";
+import { createClient } from "@/lib/supabase/client";
 
 export function PushOptinCard() {
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   async function handleEnable() {
-    if (typeof window === "undefined" || !window.Notification) {
+    if (typeof window === "undefined" || !window.Notification || !window.isSecureContext) {
       setMessage("Este navegador não suporta notificações push.");
+      return;
+    }
+
+    const supabase = createClient();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push(`/login?next=${encodeURIComponent(pathname || "/")}`);
       return;
     }
 
@@ -29,9 +42,65 @@ export function PushOptinCard() {
       return;
     }
 
+    const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
+    if (!vapidPublicKey) {
+      setMessage("Configuração de push ausente. Contate o administrador.");
+      return;
+    }
+
     startTransition(async () => {
-      await enablePushNotificationsAction();
-      setMessage("Notificações ativadas para este dispositivo.");
+      try {
+        let subscription = await registration.pushManager.getSubscription();
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: base64UrlToUint8Array(vapidPublicKey)
+          });
+        }
+
+        const payload = subscription.toJSON();
+        if (!payload.endpoint || !payload.keys?.p256dh || !payload.keys?.auth) {
+          setMessage("Não foi possível ler a inscrição do navegador.");
+          return;
+        }
+
+        const subscribeResponse = await fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            endpoint: payload.endpoint,
+            keys: {
+              p256dh: payload.keys.p256dh,
+              auth: payload.keys.auth
+            }
+          })
+        });
+
+        if (subscribeResponse.status === 401) {
+          router.push(`/login?next=${encodeURIComponent(pathname || "/")}`);
+          return;
+        }
+
+        if (!subscribeResponse.ok) {
+          setMessage("Falha ao salvar inscrição de notificações.");
+          return;
+        }
+
+        const preferenceResponse = await fetch("/api/push/preferences", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isOptedInPush: true })
+        });
+
+        if (!preferenceResponse.ok) {
+          setMessage("Inscrição salva, mas houve falha ao atualizar preferências.");
+          return;
+        }
+
+        setMessage("Notificações ativadas para este dispositivo.");
+      } catch {
+        setMessage("Não foi possível ativar notificações agora.");
+      }
     });
   }
 
