@@ -4,7 +4,7 @@ import { FavoriteButton } from "@/components/public/favorite-button";
 import { PromotionGrid } from "@/components/public/promotion-grid";
 import { PushOptinCard } from "@/components/public/push-optin-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { dutyPeriodLabel, mockCurrentDuty } from "@/lib/mock-data";
+import { dutyPeriodLabel, mockActiveBanners, mockCurrentDuty } from "@/lib/mock-data";
 
 export default function HomePage() {
   return (
@@ -19,14 +19,18 @@ export default function HomePage() {
           mapUrl: mockCurrentDuty.pharmacy.map_url
         }}
         periodLabel={dutyPeriodLabel(mockCurrentDuty.starts_at, mockCurrentDuty.ends_at)}
-      />
-
-      <div className="grid gap-3 sm:grid-cols-2">
+      >
         <FavoriteButton pharmacyId={mockCurrentDuty.pharmacy.id} isFavorite={false} />
-        <PushOptinCard />
-      </div>
+        <PushOptinCard compact />
+      </DutyHighlight>
 
-      <BannerSlot title="Espaço para parceiro de saúde" />
+      {mockActiveBanners.length > 0 ? (
+        <div className="space-y-2">
+          {mockActiveBanners.map((banner) => (
+            <BannerSlot key={banner.id} title={banner.title} imageUrl={banner.imageUrl} linkUrl={banner.linkUrl} />
+          ))}
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -47,16 +51,6 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Parceiros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Área reservada para parceiros e anúncios institucionais, sem competir com o bloco de plantão.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

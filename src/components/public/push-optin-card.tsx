@@ -2,13 +2,17 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Bell } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { base64UrlToUint8Array, registerServiceWorker } from "@/lib/notifications/sw";
-import { createClient } from "@/lib/supabase/client";
 
-export function PushOptinCard() {
+type PushOptinCardProps = {
+  compact?: boolean;
+};
+
+export function PushOptinCard({ compact = false }: PushOptinCardProps) {
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
@@ -20,13 +24,19 @@ export function PushOptinCard() {
       return;
     }
 
-    const supabase = createClient();
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
+    const preflightResponse = await fetch("/api/push/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
 
-    if (!user) {
+    if (preflightResponse.status === 401) {
       router.push(`/login?next=${encodeURIComponent(pathname || "/")}`);
+      return;
+    }
+
+    if (!preflightResponse.ok) {
+      setMessage("Não foi possível validar sua sessão.");
       return;
     }
 
@@ -102,6 +112,18 @@ export function PushOptinCard() {
         setMessage("Não foi possível ativar notificações agora.");
       }
     });
+  }
+
+  if (compact) {
+    return (
+      <div className="space-y-1">
+        <Button className="w-full" disabled={isPending} onClick={handleEnable}>
+          <Bell className="h-4 w-4" />
+          {isPending ? "Ativando..." : "Ativar notificações"}
+        </Button>
+        {message ? <p className="text-xs text-muted-foreground">{message}</p> : null}
+      </div>
+    );
   }
 
   return (

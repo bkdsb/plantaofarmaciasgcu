@@ -60,6 +60,13 @@ export const mockHistory = Array.from({ length: 8 }).map((_, index) => ({
   endsAt: addDays(now, (index - 3) * 7 + 6)
 }));
 
+export const mockActiveBanners: Array<{
+  id: number;
+  title: string;
+  imageUrl?: string;
+  linkUrl?: string;
+}> = [];
+
 export function dutyPeriodLabel(startsAt: string, endsAt: string) {
   return `${format(new Date(startsAt), "dd MMM", { locale: ptBR })} a ${format(new Date(endsAt), "dd MMM yyyy", { locale: ptBR })}`;
 }

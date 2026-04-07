@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Bell } from "lucide-react";
 
 import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,10 @@ export function PublicHeader() {
         </nav>
 
         <Button variant="outline" size="sm" asChild>
-          <Link href="/preferencias">Notificações</Link>
+          <Link href="/preferencias">
+            <Bell className="h-4 w-4" />
+            Notificações
+          </Link>
         </Button>
       </div>
     </header>

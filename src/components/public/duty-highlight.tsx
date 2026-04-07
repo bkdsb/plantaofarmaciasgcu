@@ -15,9 +15,10 @@ type DutyHighlightProps = {
     mapUrl?: string | null;
   };
   periodLabel: string;
+  children?: React.ReactNode;
 };
 
-export function DutyHighlight({ pharmacy, periodLabel }: DutyHighlightProps) {
+export function DutyHighlight({ pharmacy, periodLabel, children }: DutyHighlightProps) {
   const whatsappUrl = pharmacy.whatsapp
     ? `https://wa.me/${pharmacy.whatsapp.replace(/\D/g, "")}`
     : undefined;
@@ -65,6 +66,8 @@ export function DutyHighlight({ pharmacy, periodLabel }: DutyHighlightProps) {
             </Button>
           ) : null}
         </div>
+
+        {children ? <div className="grid grid-cols-1 gap-2 border-t border-border/70 pt-3 sm:grid-cols-2">{children}</div> : null}
       </CardContent>
     </Card>
   );
