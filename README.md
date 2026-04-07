@@ -25,8 +25,12 @@ Base inicial de um sistema web completo para gestão de plantão rotativo de far
 ## Setup rápido
 1. `cp .env.example .env.local`
 2. Preencher variáveis do Supabase e Web Push.
-3. `npm install`
-4. `npm run dev`
+3. Definir no mínimo:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (ou `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
+   - `SUPABASE_SERVICE_ROLE_KEY` (ou `SUPABASE_SECRET_KEY`)
+4. `npm install`
+5. `npm run dev`
 
 ## Endpoints internos
 - `POST /api/push/subscribe`
