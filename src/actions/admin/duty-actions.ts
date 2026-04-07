@@ -1,5 +1,6 @@
 "use server";
 
+import { endOfWeek, formatISO, parseISO, startOfWeek } from "date-fns";
 import { revalidatePath } from "next/cache";
 
 import { requireSuperadmin } from "@/lib/auth/guards";
@@ -12,24 +13,35 @@ export async function createManualDutyAction(payload: unknown) {
   const { user } = await requireSuperadmin();
   const parsed = dutyScheduleSchema.parse(payload);
   const supabase = await createServerSupabaseClient();
+  const alignedWeekStart = startOfWeek(parseISO(parsed.weekStart), { weekStartsOn: 1 });
+  const alignedWeekEnd = endOfWeek(alignedWeekStart, { weekStartsOn: 1 });
+  const startsAt = alignedWeekStart.toISOString();
+  const endsAt = alignedWeekEnd.toISOString();
+  const weekStart = formatISO(alignedWeekStart, { representation: "date" });
+  const weekEnd = formatISO(alignedWeekEnd, { representation: "date" });
+  const notes = parsed.notes?.trim() ? parsed.notes.trim() : null;
 
   const { data: createdDuty, error } = await supabase
     .from("duty_schedules")
     .insert({
       pharmacy_id: parsed.pharmacyId,
-      starts_at: parsed.startsAt,
-      ends_at: parsed.endsAt,
-      week_start: parsed.startsAt,
-      week_end: parsed.endsAt,
-      mode: parsed.mode,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      week_start: weekStart,
+      week_end: weekEnd,
+      mode: "manual",
       status: parsed.status,
-      notes: parsed.notes ?? null,
+      notes,
       created_by: user.id
     })
     .select("id")
     .single<{ id: number }>();
 
   if (error || !createdDuty) {
+    if (error?.code === "23P01") {
+      throw new Error("Já existe um plantão cadastrado para esta semana.");
+    }
+
     throw new Error(error?.message ?? "Falha ao criar plantão");
   }
 
@@ -45,9 +57,9 @@ export async function createManualDutyAction(payload: unknown) {
       dutyScheduleId: createdDuty.id,
       pharmacyId: pharmacy.id,
       pharmacyName: pharmacy.name,
-      startsAt: parsed.startsAt,
-      endsAt: parsed.endsAt,
-      scheduledFor: parsed.startsAt,
+      startsAt,
+      endsAt,
+      scheduledFor: startsAt,
       eventKey: `weekly_general_${createdDuty.id}`
     });
 
@@ -56,9 +68,9 @@ export async function createManualDutyAction(payload: unknown) {
       dutyScheduleId: createdDuty.id,
       pharmacyId: pharmacy.id,
       pharmacyName: pharmacy.name,
-      startsAt: parsed.startsAt,
-      endsAt: parsed.endsAt,
-      scheduledFor: reminderDateForFavoriteStart(new Date(parsed.startsAt)).toISOString(),
+      startsAt,
+      endsAt,
+      scheduledFor: reminderDateForFavoriteStart(alignedWeekStart).toISOString(),
       eventKey: `favorite_reminder_${createdDuty.id}`
     });
   }
@@ -102,6 +114,10 @@ export async function generateAutomaticDutyCalendarAction(payload: unknown) {
   const { error: insertError } = await supabase.from("duty_schedules").insert(duties);
 
   if (insertError) {
+    if (insertError.code === "23P01") {
+      throw new Error("Já existe plantão em parte do período informado. Ajuste a semana inicial ou remova conflitos.");
+    }
+
     throw new Error(insertError.message);
   }
 
